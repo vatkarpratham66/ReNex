@@ -1,29 +1,29 @@
 const express = require("express");
-const mongoose = require("mongoose");
-require("dotenv").config();
+const dotenv = require("dotenv");
+const cors = require("cors");
+const connectDB = require("./config/db");
+const path = require("path");
+
+// Load env
+dotenv.config();
+
+// Connect DB
+connectDB();
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
-// ✅ MongoDB connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log("✅ MongoDB Connected"))
-.catch(err => console.error("❌ MongoDB Error:", err));
+// ✅ Serve uploaded images statically
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ✅ Import Models (just to register them with Mongoose)
-require("./models/User");
-require("./models/Donor");
-require("./models/NGO");
-require("./models/Accept");
+// Routes
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/users", require("./routes/users"));
+app.use("/api/donations", require("./routes/donations"));
+app.use("/api/accept", require("./routes/accept"));
+app.use("/api/stats", require("./routes/stats"));
 
-// ✅ Test route
-app.get("/", (req, res) => {
-  res.send("Donation API Backend Running 🚀");
-});
 
-// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
