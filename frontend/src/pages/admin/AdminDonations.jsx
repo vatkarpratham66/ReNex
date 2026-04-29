@@ -69,6 +69,8 @@ const AdminDonations = () => {
     loadDonations();
   }, []);
 
+  const categories = ["all", ...new Set(donations.map((d) => d.category).filter(Boolean))];
+
   // ✅ Filtering logic (search + status + category)
   const filteredDonations = donations.filter((d) => {
     const matchesStatus =
@@ -88,49 +90,42 @@ const AdminDonations = () => {
 
   return (
     <Layout>
-      <div className="space-y-8 p-4">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="space-y-5">
+        <div className="rounded-[30px] bg-gradient-to-r from-emerald-600 to-green-500 px-5 py-6 text-white sm:px-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Manage Donations</h1>
-            <p className="text-gray-500 text-sm">
-              View and manage all donations submitted by donors
+            <h1 className="text-3xl font-black tracking-tight">Manage Donations</h1>
+            <p className="mt-2 text-sm text-green-50/90">
+              Review live donation listings, filter quickly, and take action from mobile.
             </p>
           </div>
-
-          {/* Filters Section */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search */}
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+            <div className="grid w-full gap-3 sm:grid-cols-3 lg:max-w-3xl">
+            <div className="relative sm:col-span-3">
+              <Search className="absolute left-3 top-3 text-green-200 w-5 h-5" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search donations..."
-                className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
+                className="w-full rounded-2xl border border-white/20 bg-white/15 py-3 pl-10 pr-4 text-sm text-white placeholder:text-green-100/80 outline-none backdrop-blur focus:bg-white/20"
               />
             </div>
-
-            {/* Category Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-500" />
+            <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-3 py-3 backdrop-blur">
+              <Filter className="w-4 h-4 text-green-100" />
               <select
-                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 bg-white"
+                className="w-full bg-transparent text-sm text-white outline-none"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
               >
-                <option value="all">All Categories</option>
-                <option value="food">Food</option>
-                <option value="clothes">Clothes</option>
-                <option value="education">Education</option>
-                <option value="other">Others</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category === "all" ? "All Categories" : category}
+                  </option>
+                ))}
               </select>
             </div>
-
-            {/* Status Filter */}
             <select
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 bg-white"
+              className="rounded-2xl bg-white/15 px-3 py-3 text-sm text-white outline-none backdrop-blur"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -144,18 +139,18 @@ const AdminDonations = () => {
             </select>
           </div>
         </div>
+        </div>
 
-        {/* Donation Cards */}
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="animate-spin w-10 h-10 text-green-600" />
           </div>
         ) : filteredDonations.length === 0 ? (
-          <div className="text-center py-20 text-gray-500 bg-white rounded-xl shadow-sm">
+          <div className="rounded-[28px] bg-white py-20 text-center text-gray-500 shadow-sm ring-1 ring-gray-100">
             No donations found.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredDonations.map((donation) => {
               const photo =
                 donation.photos && donation.photos.length > 0
@@ -165,9 +160,8 @@ const AdminDonations = () => {
               return (
                 <div
                   key={donation._id}
-                  className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+                  className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
                 >
-                  {/* Image Preview */}
                   <div className="mb-3 w-full flex justify-center">
                     {photo ? (
                       <img
@@ -182,7 +176,6 @@ const AdminDonations = () => {
                     )}
                   </div>
 
-                  {/* Donation Info */}
                   <div className="flex items-start justify-between">
                     <div>
                       <h2 className="font-semibold text-gray-800 text-lg truncate">
@@ -201,7 +194,6 @@ const AdminDonations = () => {
                     <StatusBadge status={donation.status} />
                   </div>
 
-                  {/* Donor Info */}
                   <div className="mt-3 text-sm text-gray-600">
                     {donation.donor?.user_name && (
                       <p className="flex items-center gap-2">
@@ -217,11 +209,10 @@ const AdminDonations = () => {
                     )}
                   </div>
 
-                  {/* Actions */}
                   <div className="flex justify-end mt-4">
                     <button
                       onClick={() => deleteDonation(donation._id)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-white bg-red-600 hover:bg-red-700 rounded-lg text-sm transition"
+                      className="flex min-h-11 items-center gap-1 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
                     >
                       <Trash2 size={16} /> Delete
                     </button>

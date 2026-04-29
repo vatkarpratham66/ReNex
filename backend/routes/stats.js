@@ -13,10 +13,14 @@ router.get("/", async (req, res) => {
     const totalDonations = donorDocs.reduce((sum, d) => sum + d.donations.length, 0);
     const totalNGOs = await User.countDocuments({ role: "ngo" });
     const delivered = await Accept.countDocuments({ status: "delivered" });
+    const locations = new Set();
 
-    // Cities → assuming `User` schema has a "city" field (if not, set to 0)
-    const ngoCities = await User.distinct("city", { role: "ngo" });
-    const cities = ngoCities.length;
+    donorDocs.forEach((donor) => {
+      donor.donations.forEach((donation) => {
+        const location = donation.pickup_location?.trim();
+        if (location) locations.add(location.toLowerCase());
+      });
+    });
 
     // ===== Weekly Trends =====
     const sixWeeksAgo = new Date();
@@ -58,7 +62,7 @@ router.get("/", async (req, res) => {
         donations: totalDonations,
         ngos: totalNGOs,
         lives: delivered,
-        cities,
+        locations: locations.size,
       },
       trends: {
         donations: donationsTrend,

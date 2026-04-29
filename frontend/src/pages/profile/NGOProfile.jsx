@@ -37,7 +37,7 @@ const NGOProfile = () => {
           registration_no: profile.registration_no || "",
           needs_category_csv: (profile.needs_category || []).join(", "),
         });
-        setUser(data.user);
+        setUser(data.user, profile);
       } catch {
         toast.error("❌ Failed to load NGO profile");
       } finally {
@@ -67,7 +67,7 @@ const NGOProfile = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setUser(data.user);
+      setUser(data.user, data.profile);
       setProfileData(data.profile);
       reset({
         name: data.user.name,

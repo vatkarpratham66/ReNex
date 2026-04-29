@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Package,
   MessageCircle,
@@ -7,20 +8,17 @@ import {
   AlertTriangle,
   Info,
 } from "lucide-react";
-import API from "../../api/axios";
+import API, { getBackendAssetUrl } from "../../api/axios";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 
 const BrowseDonations = () => {
   const { user } = useAuth();
   const [donations, setDonations] = useState([]);
-  const [filterStatus, setFilterStatus] = useState("All");
 
   const [isVerified, setIsVerified] = useState(false);
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
-
-  const BASE_URL = "http://localhost:5000";
 
   // ✅ Load NGO profile
   useEffect(() => {
@@ -93,14 +91,6 @@ const BrowseDonations = () => {
     window.open(url, "_blank");
   };
 
-  const statusMap = {
-    available: "Pending",
-    pending_pickup: "Pending",
-    claimed: "Accepted",
-    delivered: "Completed",
-    completed: "Completed",
-  };
-
   const filteredDonations = donations.filter(
     (donation) => donation.status === "available"
   );
@@ -108,39 +98,46 @@ const BrowseDonations = () => {
   // ✅ Handle NGO without profile
   if (user?.role === "ngo" && isProfileLoaded && !hasProfile) {
     return (
-      <div className="p-8 bg-gray-50 min-h-screen flex flex-col items-center justify-center text-center">
-        <Info className="w-10 h-10 text-sky-600 mb-3" />
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center rounded-[30px] bg-white px-6 py-12 text-center shadow-sm ring-1 ring-gray-100">
+        <Info className="mb-3 h-10 w-10 text-sky-600" />
+        <h2 className="text-xl font-semibold text-gray-800">
           Complete Your NGO Profile
         </h2>
-        <p className="text-gray-600 max-w-md mb-4">
+        <p className="mt-2 max-w-md text-sm text-gray-600">
           Please complete your NGO profile before browsing or accepting donations.
           This helps us verify your organization and maintain transparency.
         </p>
-        <a
-          href="/profile/ngo"
-          className="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-lg transition"
+        <Link
+          to="/profile/ngo"
+          className="mt-5 rounded-2xl bg-sky-600 px-5 py-3 font-semibold text-white transition hover:bg-sky-700"
         >
           Go to Profile
-        </a>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Package className="text-orange-500 w-7 h-7" />
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-          Available Donations
-        </h2>
+    <div className="space-y-5">
+      <div className="rounded-[30px] bg-gradient-to-r from-orange-500 to-amber-400 px-5 py-6 text-white sm:px-8">
+        <div className="flex items-start gap-3">
+          <div className="rounded-2xl bg-white/15 p-3 backdrop-blur">
+            <Package className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black tracking-tight sm:text-3xl">
+              Available Donations
+            </h2>
+            <p className="mt-1 text-sm text-orange-50/90">
+              Browse new listings and connect with donors quickly from your phone.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* NGO verification warning */}
       {user?.role === "ngo" && isProfileLoaded && !isVerified && (
-        <div className="flex items-start gap-3 bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-3 rounded-lg mb-6">
-          <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-yellow-600" />
+        <div className="flex items-start gap-3 rounded-2xl border border-yellow-300 bg-yellow-50 px-4 py-4 text-yellow-800">
+          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-600" />
           <p className="text-sm leading-relaxed">
             <strong>Verification Pending:</strong> Your NGO is awaiting admin approval.
             You cannot accept or manage donations until verification is complete.
@@ -148,27 +145,25 @@ const BrowseDonations = () => {
         </div>
       )}
 
-      {/* Donations */}
       {filteredDonations.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredDonations.map((donation) => {
             const imageUrl = donation.photos?.[0]
-              ? `${BASE_URL}${donation.photos[0]}`
+              ? getBackendAssetUrl(donation.photos[0])
               : "/placeholder.jpg";
 
             return (
               <div
                 key={donation._id}
-                className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg transition p-4 flex flex-col"
+                className="overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-gray-100 transition hover:-translate-y-0.5 hover:shadow-md"
               >
-                {/* Image */}
-                <div className="relative w-full h-40 rounded-lg overflow-hidden mb-3">
+                <div className="relative h-48 w-full overflow-hidden">
                   <img
                     src={imageUrl}
                     alt={donation.title}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                   />
-                  <span className="absolute top-2 left-2 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded">
+                  <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-orange-700 shadow">
                     {donation.category}
                   </span>
                 </div>

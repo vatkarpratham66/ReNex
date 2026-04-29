@@ -17,36 +17,36 @@ import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 
 const Landing = () => {
-  const { isAdmin, isDonor, isNGO } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  
 
   const [stats, setStats] = useState({
-    totals: { donations: 0, ngos: 0, lives: 0, cities: 0 },
+    totals: { donations: 0, ngos: 0, lives: 0, locations: 0 },
     trends: [],
   });
   const [loading, setLoading] = useState(true);
 
   // Redirect based on user role
   useEffect(() => {
-    if (isAdmin) navigate("/admin/dashboard");
-    else if (isDonor) navigate("/donor/dashboard");
-    else if (isNGO) navigate("/ngo/dashboard");
-  }, [isAdmin, isDonor, isNGO, navigate]);
+    if (user?.role === "admin") navigate("/admin/dashboard");
+    else if (user?.role === "donor" || user?.role === "ngo") navigate("/dashboard");
+  }, [user, navigate]);
 
   // Fetch stats
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const base =
-          import.meta.env.VITE_API_URL || process.env.REACT_APP_API_URL || "";
-        const { data } = await API.get(`${base}/stats`);
+        const { data } = await API.get("/stats");
 
         const totals = data.totals ?? {
           donations: data.donations ?? 0,
           ngos: data.ngos ?? 0,
           lives: data.lives ?? 0,
-          cities: data.cities ?? 0,
+          locations: data.locations ?? 0,
         };
+
+        totals.locations = totals.locations ?? data.locations ?? data.cities ?? 0;
 
         const donationsTrend = data.trends?.donations ?? [];
         const livesTrend = data.trends?.lives ?? [];
@@ -84,8 +84,7 @@ const Landing = () => {
   return (
     <div className="bg-gray-50">
       <Navbar />
-
-      {/* HERO SECTION */}
+      {/* HERO */}
       <header className="bg-gradient-to-r from-sky-600 to-green-600 text-white">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-20 flex flex-col-reverse md:flex-row items-center gap-10">
           {/* Text Content */}
@@ -130,7 +129,7 @@ const Landing = () => {
       </header>
 
       {/* HOW IT WORKS */}
-      <section className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-20 text-center">
+      <section id="how-it-works" className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-20 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold mb-10 sm:mb-12">How It Works</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
           {[
@@ -196,8 +195,8 @@ const Landing = () => {
                     color: "text-orange-600",
                   },
                   {
-                    label: "Cities",
-                    value: stats.totals.cities.toLocaleString(),
+                    label: "Locations",
+                    value: stats.totals.locations.toLocaleString(),
                     color: "text-purple-600",
                   },
                 ].map((item, i) => (
@@ -238,7 +237,7 @@ const Landing = () => {
       </section>
 
       {/* SUCCESS STORIES */}
-      <section className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-20">
+      <section id="success-stories" className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-20">
         <h2 className="text-2xl sm:text-3xl font-bold text-center mb-10 sm:mb-12">
           Success Stories
         </h2>
@@ -275,9 +274,9 @@ const Landing = () => {
           ))}
         </div>
         <div className="text-center mt-8">
-          <Link to="/stories" className="text-sky-600 font-semibold hover:underline">
-            View More Stories →
-          </Link>
+          <a href="#how-it-works" className="text-sky-600 font-semibold hover:underline">
+            See How It Works →
+          </a>
         </div>
       </section>
 
@@ -293,18 +292,18 @@ const Landing = () => {
           <div>
             <h4 className="text-white font-semibold mb-2">Platform</h4>
             <ul className="space-y-1 text-sm">
-              <li><Link to="/about" className="hover:text-white">How it Works</Link></li>
-              <li><Link to="/donors" className="hover:text-white">For Donors</Link></li>
-              <li><Link to="/ngos" className="hover:text-white">For NGOs</Link></li>
+              <li><a href="#how-it-works" className="hover:text-white">How it Works</a></li>
+              <li><Link to="/register?role=donor" className="hover:text-white">For Donors</Link></li>
+              <li><Link to="/register?role=ngo" className="hover:text-white">For NGOs</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-white font-semibold mb-2">Support</h4>
             <ul className="space-y-1 text-sm">
-              <li><Link to="/help" className="hover:text-white">Help Center</Link></li>
-              <li><Link to="/contact" className="hover:text-white">Contact</Link></li>
-              <li><Link to="/privacy" className="hover:text-white">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="hover:text-white">Terms</Link></li>
+              <li><Link to="/login" className="hover:text-white">Help Center</Link></li>
+              <li><a href="mailto:support@needo.local" className="hover:text-white">Contact</a></li>
+              <li><a href="#success-stories" className="hover:text-white">Success Stories</a></li>
+              <li><Link to="/register?role=ngo" className="hover:text-white">Partner with Us</Link></li>
             </ul>
           </div>
         </div>

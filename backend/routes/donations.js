@@ -4,12 +4,20 @@ const auth = require("../middleware/authMiddleware");
 const requireRole = require("../middleware/role");
 const Donor = require("../models/Donor");
 const Accept = require("../models/Accept");
-const upload = require("../middleware/uplod");
-const fs = require("fs");
-const path = require("path");
+const User = require("../models/User");
+const upload = require("../middleware/uploadMiddleware");
+const {
+  sendDonationCreatedToDonor,
+  sendDonationCreatedToMatchingNgos,
+} = require("../services/notificationService");
+const {
+  deleteStoredAsset,
+  storeUploadedFiles,
+} = require("../services/storageService");
 
 const router = express.Router();
 
+const toBoolean = (value) => value === true || value === "true";
 /**
  * GET /api/donations
  * Everyone (donor/ngo) sees available donations.
@@ -59,11 +67,14 @@ router.post(
   requireRole("donor"),
   upload.array("photos", 5),
   async (req, res) => {
+    let uploadedPhotoPaths = [];
     try {
       let donor = await Donor.findOne({ user_id: req.user.id });
       if (!donor) donor = new Donor({ user_id: req.user.id, org_name: "" });
 
-      const photoPaths = req.files ? req.files.map((f) => `/uploads/${f.filename}`) : [];
+      uploadedPhotoPaths = await storeUploadedFiles(req.files, {
+        folder: "needo/donations",
+      });
 
       donor.donations.push({
         title: req.body.title,
@@ -72,15 +83,26 @@ router.post(
         quantity: req.body.quantity,
         pickup_location: req.body.pickup_location,
         pickup_by: req.body.pickup_by,
-        urgent: req.body.urgent === "true",
-        photos: photoPaths.length > 0 ? photoPaths : req.body.photos || [],
+        urgent: toBoolean(req.body.urgent),
+        photos:
+          uploadedPhotoPaths.length > 0 ? uploadedPhotoPaths : req.body.photos || [],
         status: "available",
       });
 
       await donor.save();
       const created = donor.donations[donor.donations.length - 1];
+
+      const donorUser = await User.findById(req.user.id).select("name email");
+      if (donorUser) {
+        await sendDonationCreatedToDonor({ donorUser, donation: created });
+        await sendDonationCreatedToMatchingNgos({ donorUser, donation: created });
+      }
+
       res.status(201).json({ msg: "Donation created", donation: created });
     } catch (e) {
+      if (uploadedPhotoPaths.length > 0) {
+        await Promise.all(uploadedPhotoPaths.map((photo) => deleteStoredAsset(photo)));
+      }
       console.error(e);
       res.status(500).json({ msg: "Server error" });
     }
@@ -150,6 +172,7 @@ router.put(
   requireRole("donor"),
   upload.array("photos", 5),
   async (req, res) => {
+    let newPhotos = [];
     try {
       const donor = await Donor.findOne({ user_id: req.user.id });
       if (!donor) return res.status(404).json({ msg: "Donor not found" });
@@ -163,7 +186,9 @@ router.put(
       // Photos update logic
       let updatedPhotos = donation.photos;
       if (req.files && req.files.length > 0) {
-        const newPhotos = req.files.map((f) => `/uploads/${f.filename}`);
+        newPhotos = await storeUploadedFiles(req.files, {
+          folder: "needo/donations",
+        });
         updatedPhotos = [...updatedPhotos, ...newPhotos];
       }
       if (req.body.photos) {
@@ -180,12 +205,15 @@ router.put(
       donation.pickup_location = req.body.pickup_location || donation.pickup_location;
       donation.pickup_by = req.body.pickup_by || donation.pickup_by;
       donation.urgent =
-        req.body.urgent !== undefined ? req.body.urgent === "true" : donation.urgent;
+        req.body.urgent !== undefined ? toBoolean(req.body.urgent) : donation.urgent;
       donation.photos = updatedPhotos;
 
       await donor.save();
       res.json({ msg: "Donation updated", donation });
     } catch (e) {
+      if (newPhotos.length > 0) {
+        await Promise.all(newPhotos.map((photo) => deleteStoredAsset(photo)));
+      }
       console.error(e);
       res.status(500).json({ msg: "Server error" });
     }
@@ -209,16 +237,10 @@ router.delete("/:donationId", auth, requireRole("donor"), async (req, res) => {
         .json({ msg: "Only available donations can be deleted" });
     }
 
-    // Remove photo files
     if (donation.photos && donation.photos.length > 0) {
-      donation.photos.forEach((photoPath) => {
-        const fullPath = path.join(__dirname, "..", photoPath);
-        fs.unlink(fullPath, (err) => {
-          if (err) {
-            console.error("Failed to delete file:", fullPath, err.message);
-          }
-        });
-      });
+      await Promise.all(
+        donation.photos.map((photoPath) => deleteStoredAsset(photoPath))
+      );
     }
 
     donation.remove();

@@ -5,6 +5,17 @@ import toast from "react-hot-toast";
 
 const AuthContext = createContext();
 
+const buildAuthUser = (user, profile = null) => {
+  if (!user) return null;
+  if (user.role !== "ngo") return user;
+
+  return {
+    ...user,
+    verified: profile?.verified ?? user.verified ?? false,
+    ngoStatus: profile?.status ?? user.ngoStatus ?? "pending",
+  };
+};
+
 export const AuthProvider = ({ children }) => {
   const [auth, setAuth] = useState({ user: null, token: null });
   const [loading, setLoading] = useState(true);
@@ -30,9 +41,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data } = await API.get("/users/me");
         if (data.user?.role === "ngo") {
-          // ✅ Merge NGO verification into user
-          const verified = data.profile?.verified ?? false;
-          const updatedUser = { ...data.user, verified };
+          const updatedUser = buildAuthUser(data.user, data.profile);
           setAuth((prev) => {
             const next = { ...prev, user: updatedUser };
             localStorage.setItem("auth", JSON.stringify(next));
@@ -48,6 +57,13 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         console.error("Failed to fetch user profile:", err.message);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          setAuth({ user: null, token: null });
+          localStorage.removeItem("auth");
+          if (err.response?.status === 403) {
+            toast.error(err.response?.data?.msg || "Your session is no longer valid");
+          }
+        }
       }
     };
 
@@ -56,7 +72,7 @@ export const AuthProvider = ({ children }) => {
 
   // 🔐 Login function
   const login = ({ user, token }) => {
-    const next = { user, token };
+    const next = { user: buildAuthUser(user), token };
     setAuth(next);
     localStorage.setItem("auth", JSON.stringify(next));
   };
@@ -68,8 +84,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   // 🧭 Update user (e.g., after profile edit)
-  const setUser = (user) => {
-    const next = { ...auth, user };
+  const setUser = (user, profile = null) => {
+    const next = { ...auth, user: buildAuthUser(user, profile) };
     setAuth(next);
     localStorage.setItem("auth", JSON.stringify(next));
   };

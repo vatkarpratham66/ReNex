@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { PlusCircle, MapPin, Camera, X, UploadCloud } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { PlusCircle, MapPin, X, UploadCloud } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../../api/axios";
@@ -9,7 +9,6 @@ const MAX_FILES = 4;
 const CreateDonation = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-
   const [form, setForm] = useState({
     title: "",
     category: "",
@@ -19,18 +18,11 @@ const CreateDonation = () => {
     pickup_by: "",
     urgent: false,
   });
-
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const categories = [
-    "Food Surplus",
-    "Clothes",
-    "Educational Items",
-    "Medical",
-    "Other",
-  ];
+  const categories = ["Food Surplus", "Clothes", "Educational Items", "Medical", "Other"];
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -38,12 +30,11 @@ const CreateDonation = () => {
   };
 
   const handleFiles = (newFiles) => {
-    const list = Array.from(newFiles);
-    if (files.length + list.length > MAX_FILES) {
+    const images = Array.from(newFiles).filter((f) => f.type.startsWith("image/"));
+    if (files.length + images.length > MAX_FILES) {
       toast.error(`You can upload up to ${MAX_FILES} photos.`);
       return;
     }
-    const images = list.filter((f) => f.type.startsWith("image/"));
     setFiles((prev) => [...prev, ...images]);
   };
 
@@ -53,7 +44,6 @@ const CreateDonation = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!form.title || !form.category || !form.pickup_location) {
       toast.error("Please fill all required fields.");
       return;
@@ -71,18 +61,8 @@ const CreateDonation = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      toast.success("🎉 Donation added successfully!");
-      setForm({
-        title: "",
-        category: "",
-        description: "",
-        quantity: "",
-        pickup_location: "",
-        pickup_by: "",
-        urgent: false,
-      });
-      setFiles([]);
-      setTimeout(() => navigate("/my-donations"), 2000);
+      toast.success("Donation added successfully!");
+      setTimeout(() => navigate("/donor/my"), 900);
     } catch (err) {
       console.error("Error adding donation:", err);
       toast.error(err?.response?.data?.msg || "Error adding donation");
@@ -91,68 +71,57 @@ const CreateDonation = () => {
     }
   };
 
-  const onDragOver = (e) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const onDragLeave = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
-
-  const onDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    const dtFiles = e.dataTransfer.files;
-    if (dtFiles && dtFiles.length) handleFiles(dtFiles);
-  };
-
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-md border border-yellow-100 p-6">
-        <h2 className="flex items-center gap-2 text-2xl font-bold mb-6 text-gray-800">
-          <PlusCircle className="text-yellow-500" />
-          Create Donation
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Category + Quantity */}
-          <div className="grid sm:grid-cols-2 gap-4">
+    <div className="mx-auto max-w-5xl">
+      <div className="overflow-hidden rounded-[30px] bg-white shadow-sm ring-1 ring-yellow-100">
+        <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 px-5 py-6 text-gray-900 sm:px-8">
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl bg-white/70 p-3 shadow-sm">
+              <PlusCircle className="text-amber-700" />
+            </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Category *</label>
+              <h2 className="text-2xl font-black tracking-tight sm:text-3xl">Create Donation</h2>
+              <p className="mt-1 text-sm text-amber-950/80">
+                Add clear details so NGOs can respond quickly on mobile.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6 p-5 sm:p-8">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Category *</label>
               <select
                 name="category"
                 value={form.category}
                 onChange={handleChange}
                 required
-                className="w-full border border-yellow-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-yellow-400"
+                className="w-full rounded-2xl border border-yellow-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-yellow-400 focus:bg-white focus:ring-4 focus:ring-yellow-100"
               >
                 <option value="">Select category</option>
                 {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
+
             <div>
-              <label className="block text-sm font-medium mb-1">Quantity</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Quantity</label>
               <input
                 type="number"
                 name="quantity"
                 value={form.quantity}
                 onChange={handleChange}
-                placeholder="e.g., 5 boxes"
                 min="1"
-                className="w-full border border-yellow-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-yellow-400"
+                placeholder="How many units?"
+                className="w-full rounded-2xl border border-yellow-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-yellow-400 focus:bg-white focus:ring-4 focus:ring-yellow-100"
               />
             </div>
           </div>
 
-          {/* Title */}
           <div>
-            <label className="block text-sm font-medium mb-1">Title *</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Title *</label>
             <input
               type="text"
               name="title"
@@ -160,81 +129,78 @@ const CreateDonation = () => {
               onChange={handleChange}
               placeholder="Short donation title"
               required
-              className="w-full border border-yellow-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-yellow-400"
+              className="w-full rounded-2xl border border-yellow-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-yellow-400 focus:bg-white focus:ring-4 focus:ring-yellow-100"
             />
           </div>
 
-          {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Description</label>
             <textarea
               name="description"
               value={form.description}
               onChange={handleChange}
-              rows={3}
-              placeholder="Describe your items, condition, or other details"
-              className="w-full border border-yellow-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-yellow-400"
+              rows={4}
+              placeholder="Describe the items, condition, and anything NGOs should know."
+              className="w-full rounded-2xl border border-yellow-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-yellow-400 focus:bg-white focus:ring-4 focus:ring-yellow-100"
             />
           </div>
 
-          {/* Pickup Location & Date */}
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-1">Pickup Location *</label>
-              <div className="flex items-center border border-yellow-300 rounded-lg px-3 py-2 bg-gray-50">
-                <MapPin className="text-gray-500 mr-2" />
+              <label className="mb-2 block text-sm font-medium text-gray-700">Pickup Location *</label>
+              <div className="flex items-center gap-3 rounded-2xl border border-yellow-200 bg-gray-50 px-4 py-3 transition focus-within:border-yellow-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-yellow-100">
+                <MapPin className="h-4 w-4 text-gray-500" />
                 <input
                   type="text"
                   name="pickup_location"
                   value={form.pickup_location}
                   onChange={handleChange}
-                  placeholder="Enter your pickup address"
+                  placeholder="Enter pickup address"
                   required
-                  className="w-full bg-transparent outline-none"
+                  className="w-full bg-transparent text-sm outline-none"
                 />
               </div>
             </div>
+
             <div>
-              <label className="block text-sm font-medium mb-1">Pickup By</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Pickup By</label>
               <input
                 type="date"
                 name="pickup_by"
                 value={form.pickup_by}
                 onChange={handleChange}
-                className="w-full border border-yellow-300 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-yellow-400"
+                className="w-full rounded-2xl border border-yellow-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-yellow-400 focus:bg-white focus:ring-4 focus:ring-yellow-100"
               />
             </div>
           </div>
 
-          {/* Urgent */}
-          <div>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                name="urgent"
-                checked={form.urgent}
-                onChange={handleChange}
-              />
-              <span>Mark as urgent</span>
-            </label>
-          </div>
+          <label className="flex items-center gap-3 rounded-2xl border border-yellow-100 bg-yellow-50 px-4 py-3 text-sm text-gray-700">
+            <input type="checkbox" name="urgent" checked={form.urgent} onChange={handleChange} className="h-4 w-4" />
+            <span>Mark this donation as urgent</span>
+          </label>
 
-          {/* File Upload */}
           <div
-            className={`border-2 rounded-lg p-6 text-center transition ${
-              dragOver
-                ? "border-yellow-400 bg-yellow-50"
-                : "border-dashed border-yellow-300 bg-white"
+            className={`cursor-pointer rounded-[26px] border-2 p-5 text-center transition ${
+              dragOver ? "border-yellow-400 bg-yellow-50" : "border-dashed border-yellow-200 bg-white"
             }`}
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+            }}
             onClick={() => fileInputRef.current?.click()}
           >
-            <UploadCloud className="mx-auto text-yellow-500 mb-2" size={32} />
-            <p className="text-gray-600 mb-2">
-              Drag & drop or click to upload (max {MAX_FILES} images)
-            </p>
+            <UploadCloud className="mx-auto mb-3 h-9 w-9 text-yellow-500" />
+            <p className="text-sm font-medium text-gray-700">Drag, drop, or tap to upload photos</p>
+            <p className="mt-1 text-xs text-gray-500">Up to {MAX_FILES} images for faster pickup decisions</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -245,21 +211,17 @@ const CreateDonation = () => {
             />
 
             {files.length > 0 && (
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {files.map((file, i) => (
-                  <div
-                    key={i}
-                    className="relative w-full h-24 border rounded-lg overflow-hidden group"
-                  >
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+                  <div key={i} className="relative h-24 overflow-hidden rounded-2xl border">
+                    <img src={URL.createObjectURL(file)} alt="Preview" className="h-full w-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => removeFile(i)}
-                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeFile(i);
+                      }}
+                      className="absolute right-2 top-2 rounded-full bg-red-600 p-1 text-white"
                     >
                       <X size={14} />
                     </button>
@@ -269,11 +231,10 @@ const CreateDonation = () => {
             )}
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition disabled:opacity-50"
+            className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-yellow-500 px-4 py-3 font-semibold text-white transition hover:bg-yellow-600 disabled:opacity-60"
           >
             {loading ? "Submitting..." : "Create Donation"}
           </button>

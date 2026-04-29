@@ -7,6 +7,23 @@ const { OAuth2Client } = require("google-auth-library");
 const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const buildAuthPayload = (user, fallbackPicture = "") => ({
+  token: jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  ),
+  user: {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone || "",
+    blocked: Boolean(user.blocked),
+    profilePic: user.profilePic || fallbackPicture || "",
+  },
+});
+
 // @route   POST /api/auth/register
 router.post("/register", async (req, res) => {
   try {
@@ -25,27 +42,13 @@ router.post("/register", async (req, res) => {
     const user = new User({ name, email, phone, password_hash, role });
     await user.save();
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        profilePic: user.profilePic || "",
-      },
-    });
+    res.status(201).json(buildAuthPayload(user));
   } catch (err) {
     console.error("Register error:", err);
     res.status(500).json({ msg: "Server error" });
   }
 });
+
 
 // @route   POST /api/auth/login
 router.post("/login", async (req, res) => {
@@ -54,26 +57,14 @@ router.post("/login", async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ msg: "Invalid credentials" });
+    if (user.blocked) {
+      return res.status(403).json({ msg: "Your account has been blocked" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        profilePic: user.profilePic || "",
-      },
-    });
+    res.json(buildAuthPayload(user));
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ msg: "Server error" });
@@ -116,24 +107,11 @@ router.post("/google", async (req, res) => {
         profilePic: picture,
       });
       await user.save();
+    } else if (user.blocked) {
+      return res.status(403).json({ msg: "Your account has been blocked" });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        profilePic: user.profilePic || picture || "",
-      },
-    });
+    res.json(buildAuthPayload(user, picture));
   } catch (err) {
     console.error("Google login error:", err);
     res.status(500).json({ msg: "Google login failed" });

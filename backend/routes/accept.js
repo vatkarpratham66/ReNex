@@ -5,8 +5,19 @@ const requireRole = require("../middleware/role");
 const Accept = require("../models/Accept");
 const Donor = require("../models/Donor");
 const NGO = require("../models/NGO");
+const User = require("../models/User");
+const {
+  sendDonationAccepted,
+  sendDonationStatusUpdate,
+} = require("../services/notificationService");
 
 const router = express.Router();
+
+const allowedTransitions = {
+  pending_pickup: ["in_transit"],
+  in_transit: ["delivered"],
+  delivered: [],
+};
 
 /**
  * POST /api/accept/:donationId
@@ -54,6 +65,20 @@ router.post("/:donationId", auth, requireRole("ngo"), async (req, res) => {
     });
     await accept.save();
 
+    const [donorUser, ngoUser] = await Promise.all([
+      User.findById(donor.user_id).select("name email phone"),
+      User.findById(req.user.id).select("name email phone"),
+    ]);
+
+    if (donorUser && ngoUser) {
+      await sendDonationAccepted({
+        donorUser,
+        donation,
+        ngo,
+        ngoUser,
+      });
+    }
+
     res.status(201).json({ msg: "Donation accepted", accept });
   } catch (e) {
     console.error("Accept donation error:", e);
@@ -85,7 +110,19 @@ router.put(
         return res.status(403).json({ msg: "You cannot update this record" });
       }
 
-      accept.status = req.body.status;
+      const nextStatus = req.body.status;
+      if (nextStatus === accept.status) {
+        return res.json({ msg: "Status unchanged", accept });
+      }
+
+      const validNext = allowedTransitions[accept.status] || [];
+      if (!validNext.includes(nextStatus)) {
+        return res.status(400).json({
+          msg: `Invalid status transition from ${accept.status} to ${nextStatus}`,
+        });
+      }
+
+      accept.status = nextStatus;
       await accept.save();
 
       // if delivered, also mark donation as completed on donor doc
@@ -97,6 +134,21 @@ router.put(
             sub.status = "completed";
             await donor.save();
           }
+        }
+      }
+
+      const donor = await Donor.findById(accept.donor_id);
+
+      if (donor) {
+        const donorAccount = await User.findById(donor.user_id).select("name email");
+        const donation = donor.donations.id(accept.donation_id);
+        if (donation && donorAccount && myNgo) {
+          await sendDonationStatusUpdate({
+            donorUser: donorAccount,
+            donation,
+            ngo: myNgo,
+            status: accept.status,
+          });
         }
       }
 

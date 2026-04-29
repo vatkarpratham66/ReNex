@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
+  
   {
     name: {
       type: String,
@@ -26,6 +27,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["donor", "ngo", "admin"],
       required: true,
+    },
+    blocked: {
+      type: Boolean,
+      default: false,
     },
     profilePic: {
       type: String, // Google photo URL

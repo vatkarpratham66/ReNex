@@ -7,10 +7,15 @@ import {
   MessageCircle,
   ImageOff,
   X,
+  Edit3,
+  Trash2,
 } from "lucide-react";
 import API from "../../api/axios";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const MyDonations = () => {
+  const navigate = useNavigate();
   const [donations, setDonations] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [selectedDonation, setSelectedDonation] = useState(null);
@@ -25,36 +30,50 @@ const MyDonations = () => {
   };
 
   useEffect(() => {
-    const fetchDonations = async () => {
-      try {
-        const res = await API.get("/donations/my/details");
-        const { donations = [], accepts = [] } = res.data;
-
-        const merged = donations.map((donation) => {
-          const acceptRecord = accepts.find(
-            (a) => String(a.donation_id) === String(donation._id)
-          );
-          return {
-            ...donation,
-            ngo_name: acceptRecord?.ngo_id?.ngo_name || null,
-            ngo_phone: acceptRecord?.ngo_id?.user_phone || null,
-            ngo_email: acceptRecord?.ngo_id?.user_email || null,
-            accept_status: acceptRecord?.status || null,
-          };
-        });
-
-        const sorted = merged.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        );
-
-        setDonations(sorted);
-        setFiltered(sorted);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchDonations();
+    loadDonations();
   }, []);
+
+  const loadDonations = async () => {
+    try {
+      const res = await API.get("/donations/my/details");
+      const { donations = [], accepts = [] } = res.data;
+
+      const merged = donations.map((donation) => {
+        const acceptRecord = accepts.find(
+          (a) => String(a.donation_id) === String(donation._id)
+        );
+        return {
+          ...donation,
+          ngo_name: acceptRecord?.ngo_id?.ngo_name || null,
+          ngo_phone: acceptRecord?.ngo_id?.user_phone || null,
+          ngo_email: acceptRecord?.ngo_id?.user_email || null,
+          accept_status: acceptRecord?.status || null,
+        };
+      });
+
+      const sorted = merged.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      setDonations(sorted);
+      setFiltered(sorted);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load your donations");
+    }
+  };
+
+  const handleDelete = async (donationId) => {
+    if (!window.confirm("Delete this donation?")) return;
+
+    try {
+      await API.delete(`/donations/${donationId}`);
+      toast.success("Donation deleted");
+      loadDonations();
+    } catch (err) {
+      toast.error(err.response?.data?.msg || "Failed to delete donation");
+    }
+  };
 
   useEffect(() => {
     let data = [...donations];
@@ -267,12 +286,30 @@ const MyDonations = () => {
                   </p>
 
                   <div className="flex items-center justify-between mt-auto pt-4">
-                    <button
-                      onClick={() => setSelectedDonation(donation)}
-                      className="px-3 py-1 text-xs border border-yellow-400 text-yellow-600 rounded-full hover:bg-yellow-50"
-                    >
-                      View Details
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedDonation(donation)}
+                        className="px-3 py-1 text-xs border border-yellow-400 text-yellow-600 rounded-full hover:bg-yellow-50"
+                      >
+                        View Details
+                      </button>
+                      {donation.status === "available" && (
+                        <>
+                          <button
+                            onClick={() => navigate(`/donor/edit/${donation._id}`)}
+                            className="flex items-center gap-1 px-3 py-1 text-xs border border-indigo-400 text-indigo-600 rounded-full hover:bg-indigo-50"
+                          >
+                            <Edit3 size={12} /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(donation._id)}
+                            className="flex items-center gap-1 px-3 py-1 text-xs border border-red-400 text-red-600 rounded-full hover:bg-red-50"
+                          >
+                            <Trash2 size={12} /> Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
                     {whatsappLink && (
                       <a
                         href={whatsappLink}

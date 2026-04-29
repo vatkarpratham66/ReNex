@@ -63,6 +63,8 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [topDonors, setTopDonors] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [donationsTrend, setDonationsTrend] = useState([]);
+  const [categoryData, setCategoryData] = useState([]);
 
   const loadStats = async () => {
     try {
@@ -93,28 +95,41 @@ const AdminDashboard = () => {
     }
   };
 
+  const loadCharts = async () => {
+    try {
+      const [{ data: publicStats }, { data: donations }] = await Promise.all([
+        API.get("/stats"),
+        API.get("/admin/donations"),
+      ]);
+
+      const trendPoints = (publicStats?.trends?.donations || []).map((item) => ({
+        week: `Y${item._id.year}-W${item._id.week}`,
+        count: item.count,
+      }));
+      setDonationsTrend(trendPoints);
+
+      const categoryCounts = donations.reduce((acc, donation) => {
+        const key = donation.category || "Other";
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+
+      setCategoryData(
+        Object.entries(categoryCounts).map(([name, value]) => ({ name, value }))
+      );
+    } catch (err) {
+      console.error("Dashboard chart data failed", err);
+    }
+  };
+
   useEffect(() => {
     loadStats();
     loadTopDonors();
     loadActivity();
+    loadCharts();
     const interval = setInterval(loadActivity, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  const donationsTrend = [
-    { week: "W1", count: 10 },
-    { week: "W2", count: 18 },
-    { week: "W3", count: 25 },
-    { week: "W4", count: 22 },
-    { week: "W5", count: 30 },
-  ];
-
-  const categoryData = [
-    { name: "Food", value: 45 },
-    { name: "Clothes", value: 30 },
-    { name: "Education", value: 15 },
-    { name: "Other", value: 10 },
-  ];
 
   return (
     <Layout>
@@ -178,6 +193,9 @@ const AdminDashboard = () => {
                 <Line type="monotone" dataKey="count" stroke="#16a34a" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
+            {donationsTrend.length === 0 && (
+              <p className="mt-3 text-sm text-gray-500">Not enough donation trend data yet.</p>
+            )}
           </div>
 
           {/* Pie Chart */}
@@ -193,6 +211,9 @@ const AdminDashboard = () => {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
+            {categoryData.length === 0 && (
+              <p className="mt-3 text-sm text-gray-500">No donation categories available yet.</p>
+            )}
           </div>
         </div>
 

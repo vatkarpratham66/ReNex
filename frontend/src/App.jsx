@@ -14,13 +14,14 @@ import HomeDashboard from "./pages/dashboard/HomeDashboard";
 import CreateDonation from "./pages/donations/CreateDonation";
 import MyDonations from "./pages/donations/MyDonations";
 import EditDonation from "./pages/donations/EditDonation";
-import BrowseDonations from "./pages/ngo/BrowseDonations";
+import BrowseDonations from "./pages/ngo/BrowseDonationsMobile";
 import MyAccepted from "./pages/ngo/MyAccepted";
 import DonorProfile from "./pages/profile/DonorProfile";
-import NGOProfile from "./pages/profile/NGOProfile";
+import NGOProfile from "./pages/profile/NGOProfileMobile";
 
 /* Admin Pages */
-import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminDashboardMobile from "./pages/admin/AdminDashboardMobile";
+import NGOVerificationMobile from "./pages/admin/AdminNGOsMobile";
 import UserManagement from "./pages/admin/AdminUsers";        // ✅ FIXED
 import NGOVerification from "./pages/admin/AdminNGOs";       // ✅ FIXED
 import DonationManagement from "./pages/admin/AdminDonations"; // ✅ FIXED
@@ -146,7 +147,7 @@ function App() {
           element={
             <ProtectedRoute>
               <RoleRoute role="admin">
-                <AdminDashboard />
+                <AdminDashboardMobile />
               </RoleRoute>
             </ProtectedRoute>
           }
@@ -166,7 +167,7 @@ function App() {
           element={
             <ProtectedRoute>
               <RoleRoute role="admin">
-                <NGOVerification /> {/* ✅ FIXED */}
+                <NGOVerificationMobile /> {/* ✅ FIXED */}
               </RoleRoute>
             </ProtectedRoute>
           }
@@ -193,3 +194,4 @@ function App() {
 }
 
 export default App;
+

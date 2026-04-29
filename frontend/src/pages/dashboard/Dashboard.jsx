@@ -31,14 +31,14 @@ const Dashboard = () => {
         <Link to="/donor/create" className="bg-green-500 text-white py-4 rounded-xl shadow hover:bg-green-600 text-center font-semibold">
           ➕ Create Donation
         </Link>
-        <Link to="/messages" className="bg-orange-500 text-white py-4 rounded-xl shadow hover:bg-orange-600 text-center font-semibold">
-          💬 Messages
+        <Link to="/donor/my" className="bg-orange-500 text-white py-4 rounded-xl shadow hover:bg-orange-600 text-center font-semibold">
+          📦 My Donations
         </Link>
         <Link to="/ngo/browse" className="bg-sky-500 text-white py-4 rounded-xl shadow hover:bg-sky-600 text-center font-semibold">
           🔍 Find NGOs
         </Link>
-        <Link to="/achievements" className="bg-purple-500 text-white py-4 rounded-xl shadow hover:bg-purple-600 text-center font-semibold">
-          🏆 Achievements
+        <Link to="/home" className="bg-purple-500 text-white py-4 rounded-xl shadow hover:bg-purple-600 text-center font-semibold">
+          🏆 Community Feed
         </Link>
       </div>
 

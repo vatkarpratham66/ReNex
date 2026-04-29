@@ -1,10 +1,22 @@
 @import "tailwindcss";
 
-/* custom global styles */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   @apply bg-gray-50 text-gray-800;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#root {
+  min-height: 100vh;
 }
 
 .container-max {
-  @apply max-w-6xl mx-auto px-4;
+  @apply mx-auto max-w-6xl px-4;
+}
+
+.safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
 }

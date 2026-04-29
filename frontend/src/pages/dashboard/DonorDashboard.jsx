@@ -223,10 +223,10 @@ const DonorDashboard = () => {
                   </p>
                 </div>
                 <Link
-                  to={`/donations/${u._id}`}
+                  to="/home"
                   className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
                 >
-                  Help Now
+                  View All
                 </Link>
               </div>
             ))}

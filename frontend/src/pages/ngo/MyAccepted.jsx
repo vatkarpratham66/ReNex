@@ -40,7 +40,7 @@ const MyAccepted = () => {
 
   if (!items) {
     return (
-      <div className="flex items-center gap-2 text-gray-600 p-6">
+      <div className="flex items-center gap-2 rounded-[28px] bg-white p-6 text-gray-600 shadow-sm ring-1 ring-gray-100">
         <Loader2 className="animate-spin" /> Loading accepted donations...
       </div>
     );
@@ -58,22 +58,29 @@ const MyAccepted = () => {
         });
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Title */}
-      <div className="flex items-center gap-3 mb-6">
-        <ClipboardCheck className="text-sky-600 w-7 h-7" />
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-          My Accepted Donations
-        </h1>
+    <div className="space-y-5">
+      <div className="rounded-[30px] bg-gradient-to-r from-sky-500 to-cyan-500 px-5 py-6 text-white sm:px-8">
+        <div className="flex items-start gap-3">
+          <div className="rounded-2xl bg-white/15 p-3 backdrop-blur">
+            <ClipboardCheck className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
+              My Accepted Donations
+            </h1>
+            <p className="mt-1 text-sm text-sky-50/90">
+              Track pickups, update delivery status, and stay in contact with donors.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* 🟠 Filter Tabs */}
-      <div className="flex bg-gray-100 p-1 rounded-full w-fit mb-8">
+      <div className="flex flex-wrap gap-2 rounded-[24px] bg-white p-3 shadow-sm ring-1 ring-gray-100">
         {["All", "Pending Pickup", "In Transit", "Delivered"].map((tab) => (
           <button
             key={tab}
             onClick={() => setFilter(tab)}
-            className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
+            className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
               filter === tab
                 ? "bg-orange-500 text-white shadow-sm"
                 : "text-gray-700 hover:bg-orange-100"
@@ -86,17 +93,11 @@ const MyAccepted = () => {
 
       {/* No items found */}
       {filteredItems.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <img
-            src="/empty-box.svg"
-            alt="No donations"
-            className="w-24 h-24 mx-auto mb-3 opacity-70"
-          />
+        <div className="rounded-[28px] bg-white py-14 text-center text-gray-500 shadow-sm ring-1 ring-gray-100">
           <p>No donations found for this status.</p>
         </div>
       ) : (
-        // 🧩 Cards grid
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredItems.map((a) => {
             const donation = a.donation || {};
             const donor = a.donor || {};
@@ -107,10 +108,9 @@ const MyAccepted = () => {
             return (
               <div
                 key={a._id}
-                className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg transition flex flex-col"
+                className="overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-gray-100 transition hover:-translate-y-0.5 hover:shadow-md"
               >
-                {/* Image */}
-                <div className="relative w-full h-44 rounded-t-lg overflow-hidden">
+                <div className="relative h-44 w-full overflow-hidden">
                   <img
                     src={imageUrl}
                     alt={donation.title}
@@ -121,8 +121,7 @@ const MyAccepted = () => {
                   </span>
                 </div>
 
-                {/* Content */}
-                <div className="p-5 flex flex-col flex-grow">
+                <div className="flex flex-grow flex-col p-5">
                   <h3 className="text-lg font-semibold text-gray-900">{donation.title}</h3>
                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                     {donation.description || "No description provided."}
@@ -143,7 +142,6 @@ const MyAccepted = () => {
                     </p>
                   </div>
 
-                  {/* Status Selector */}
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Update Status
@@ -151,27 +149,25 @@ const MyAccepted = () => {
                     <select
                       value={a.status}
                       onChange={(e) => updateStatus(a._id, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-400 focus:border-sky-400 text-gray-700 transition"
+                      className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100"
                     >
-                      <option value="pending_pickup">⏳ Pending Pickup</option>
-                      <option value="in_transit">🚚 In Transit</option>
-                      <option value="delivered">✅ Delivered</option>
+                      <option value="pending_pickup">Pending Pickup</option>
+                      <option value="in_transit">In Transit</option>
+                      <option value="delivered">Delivered</option>
                     </select>
                   </div>
 
-                  {/* WhatsApp Action */}
                   {donor.user_phone && (
                     <button
                       onClick={() =>
                         openWhatsApp(donor.user_phone, donor.user_name, donation.title)
                       }
-                      className="mt-4 flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-md transition-all"
+                      className="mt-4 flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-green-500 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-green-600"
                     >
                       <MessageCircle size={16} /> WhatsApp Donor
                     </button>
                   )}
 
-                  {/* Status Info */}
                   {a.status === "in_transit" && (
                     <div className="mt-3 flex items-center gap-2 text-sky-600 text-sm font-medium">
                       <Truck size={16} /> Donation is currently in transit

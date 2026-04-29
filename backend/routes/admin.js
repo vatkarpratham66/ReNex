@@ -8,8 +8,14 @@ const requireRole = require("../middleware/role");
 const fs = require("fs");
 const path = require("path");
 const upload = require("../middleware/uplod");
+const {
+  sendNgoVerificationResult,
+  sendUserBlockedStatus,
+} = require("../services/notificationService");
 
 const router = express.Router();
+const resolveUploadPath = (storedPath) =>
+  path.join(__dirname, "..", String(storedPath || "").replace(/^\/+/, ""));
 
 // 🔐 Only Admins Can Access
 router.use(auth, requireRole("admin"));
@@ -63,14 +69,19 @@ router.get("/users", async (req, res) => {
 router.put("/users/:id/block", async (req, res) => {
   try {
     const { blocked } = req.body;
+    if (String(req.user._id) === String(req.params.id) && blocked) {
+      return res.status(400).json({ msg: "You cannot block your own account" });
+    }
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { blocked },
+      { blocked: Boolean(blocked) },
       { new: true }
     ).select("-password_hash");
 
     if (!user) return res.status(404).json({ msg: "User not found" });
 
+    await sendUserBlockedStatus({ user, blocked: Boolean(blocked) });
     res.json({ msg: `User ${blocked ? "blocked" : "unblocked"}`, user });
   } catch {
     res.status(500).json({ msg: "Server error" });
@@ -79,9 +90,54 @@ router.put("/users/:id/block", async (req, res) => {
 
 router.delete("/users/:id", async (req, res) => {
   try {
+    if (String(req.user._id) === String(req.params.id)) {
+      return res.status(400).json({ msg: "You cannot delete your own account" });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    if (user.role === "donor") {
+      const donor = await Donor.findOne({ user_id: user._id });
+      if (donor) {
+        donor.donations.forEach((donation) => {
+          donation.photos?.forEach((photo) => {
+            const filePath = resolveUploadPath(photo);
+            fs.unlink(filePath, () => {});
+          });
+        });
+        await Accept.deleteMany({ donor_id: donor._id });
+        await donor.deleteOne();
+      }
+    }
+
+    if (user.role === "ngo") {
+      const ngo = await NGO.findOne({ user_id: user._id });
+      if (ngo) {
+        const accepts = await Accept.find({ ngo_id: ngo._id });
+
+        for (const accept of accepts) {
+          if (accept.status !== "delivered") {
+            const donor = await Donor.findById(accept.donor_id);
+            const donation = donor?.donations.id(accept.donation_id);
+            if (donation) {
+              donation.status = "available";
+              await donor.save();
+            }
+          }
+        }
+
+        await Accept.deleteMany({ ngo_id: ngo._id });
+        await ngo.deleteOne();
+      }
+    }
+
     await User.findByIdAndDelete(req.params.id);
-    res.json({ msg: "User deleted" });
-  } catch {
+    res.json({ msg: "User and related records deleted" });
+  } catch (err) {
+    console.error("Delete user error:", err);
     res.status(500).json({ msg: "Server error" });
   }
 });
@@ -110,7 +166,7 @@ router.put("/ngos/:id/verify", upload.single("certificate"), async (req, res) =>
     if (!ngo) return res.status(404).json({ msg: "NGO not found" });
 
     if (req.file) {
-      ngo.certificateUrl = `/uploads/certificates/${req.file.filename}`;
+      ngo.certificateUrl = `/uploads/${req.file.filename}`;
     }
 
     ngo.status = "verified";
@@ -119,6 +175,10 @@ router.put("/ngos/:id/verify", upload.single("certificate"), async (req, res) =>
     ngo.verifiedAt = new Date();
 
     await ngo.save();
+    const ngoUser = await User.findById(ngo.user_id).select("name email");
+    if (ngoUser) {
+      await sendNgoVerificationResult({ ngo, ngoUser, approved: true });
+    }
 
     res.json({ msg: "NGO verified successfully", ngo });
   } catch (err) {
@@ -136,6 +196,10 @@ router.delete("/ngos/:id/reject", async (req, res) => {
     ngo.verified = false;
 
     await ngo.save();
+    const ngoUser = await User.findById(ngo.user_id).select("name email");
+    if (ngoUser) {
+      await sendNgoVerificationResult({ ngo, ngoUser, approved: false });
+    }
     res.json({ msg: "NGO rejected", ngo });
   } catch {
     res.status(500).json({ msg: "Server error" });
@@ -191,12 +255,14 @@ router.delete("/donations/:donationId", async (req, res) => {
     // 3️⃣ Delete Photos if Exist
     if (donation?.photos?.length > 0) {
       donation.photos.forEach((photo) => {
-        const filePath = path.join(__dirname, "..", photo);
+        const filePath = resolveUploadPath(photo);
         fs.unlink(filePath, (err) => {
           if (err) console.error("File delete failed:", filePath, err.message);
         });
       });
     }
+
+    await Accept.deleteMany({ donation_id: donation._id });
 
     // 4️⃣ Remove donation entry from DB
     donation.deleteOne();
